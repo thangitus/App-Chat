@@ -1,0 +1,3 @@
+package thangitus;
+
+class ServerMain {}
