@@ -26,7 +26,6 @@ public class Client {
    private boolean connect() {
       try {
          this.socket = new Socket(serverName, serverPort);
-         System.out.println("Client port is " + socket.getLocalPort());
          this.serverOut = socket.getOutputStream();
          this.serverIn = socket.getInputStream();
          this.bufferedIn = new BufferedReader(new InputStreamReader(serverIn));

@@ -7,16 +7,14 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class ServerMain extends ServerSocket {
+public class Server extends ServerSocket {
    private ExecutorService service = Executors.newCachedThreadPool();
-   private ArrayList<Worker> workList;
+   private ArrayList<ServerWorker> workList;
    private List<Account> userOnline;
    private List<Account> allUser;
-   private HashMap<String, Socket> hashMapUser;
 
-   public ServerMain(int port) throws IOException {
+   public Server(int port) throws IOException {
       super(port);
-      hashMapUser = new HashMap<>();
       workList = new ArrayList<>();
       userOnline = new ArrayList<>();
       allUser = readUser();
@@ -26,9 +24,9 @@ public class ServerMain extends ServerSocket {
             System.out.println("Waiting client....");
             Socket clientSocket = this.accept();
             System.out.println("Accept client");
-            Worker worker = new Worker(this, clientSocket);
-            service.submit(worker);
-            workList.add(worker);
+            ServerWorker serverWorker = new ServerWorker(this, clientSocket);
+            service.submit(serverWorker);
+            workList.add(serverWorker);
          }
       } catch (IOException e) {
          e.printStackTrace();
@@ -48,18 +46,21 @@ public class ServerMain extends ServerSocket {
       }
       return null;
    }
-   public ArrayList<Worker> getWorkList() {
+   public ArrayList<ServerWorker> getWorkList() {
       return workList;
    }
 
-   public void logout(Worker worker, String userName) {
-      workList.remove(worker);
-      hashMapUser.remove(userName);
+   public void logout(ServerWorker serverWorker, String userName) {
+      workList.remove(serverWorker);
       userOnline.remove(userName);
    }
-   public void register(String userName, String password) {
+
+   public boolean register(String userName, String password) {
       Account acc = new Account(userName, password);
+      if (allUser.contains(acc))
+         return false;
       userOnline.add(acc);
+      allUser.add(acc);
       try {
          ObjectOutputStream outputStream = new ObjectOutputStream(new FileOutputStream("Account.dat"));
          outputStream.write(allUser.size());
@@ -69,13 +70,15 @@ public class ServerMain extends ServerSocket {
       } catch (IOException e) {
          e.printStackTrace();
       }
+      return true;
    }
 
-   public static void main(String[] args) throws IOException {
-      int port = 8911;
-      new ServerMain(port);
-   }
-   public void login(String userName, String password) {
-
+   public boolean login(String[] tokens) {
+      for (Account account : allUser)
+         if (tokens[1].equalsIgnoreCase(account.userName) && tokens[2].equalsIgnoreCase(account.password)) {
+            userOnline.add(account);
+            return true;
+         }
+      return false;
    }
 }
