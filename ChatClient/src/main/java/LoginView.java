@@ -6,14 +6,8 @@ import java.time.chrono.IsoChronology;
 
 public class LoginView extends javax.swing.JFrame {
    private Socket socket;
-   private final int serverPort = 8911;
+   private final int serverPort = 8818;
    public LoginView() {
-      try {
-         this.socket = new Socket("localhost", serverPort);
-      } catch (IOException e) {
-         e.printStackTrace();
-      }
-
       initComponents();
    }
 
@@ -118,44 +112,78 @@ public class LoginView extends javax.swing.JFrame {
 
       pack();
    }// </editor-fold>//GEN-END:initComponents
-
-   private void btnLoginMouseClicked(java.awt.event.MouseEvent evt) {
+   private void btnRegisterMouseClicked(java.awt.event.MouseEvent evt) {
+      if (socket == null)
+         try {
+            this.socket = new Socket("localhost", serverPort);
+         } catch (IOException e) {
+            e.printStackTrace();
+         }
       String userName = inputUserName.getText();
       String password = inputPassword.getText();
       try {
          System.out.println("Client port is " + socket.getLocalPort());
          OutputStream outputStream = socket.getOutputStream();
+         BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(outputStream));
+         String msg = "register " + userName + " " + password;
+         bufferedWriter.write(msg);
+         bufferedWriter.newLine();
+         bufferedWriter.flush();
+         handleResponse();
+      } catch (IOException e) {
+         e.printStackTrace();
+      }
+   }
+
+   private void btnLoginMouseClicked(java.awt.event.MouseEvent evt) {
+      if (socket == null)
+         try {
+            this.socket = new Socket("localhost", serverPort);
+         } catch (IOException e) {
+            e.printStackTrace();
+         }
+
+      String userName = inputUserName.getText();
+      String password = inputPassword.getText();
+      try {
+         System.out.println("Login " + userName);
+         OutputStream outputStream = socket.getOutputStream();
+         BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(outputStream));
+
          String msg = "login " + userName + " " + password;
-         outputStream.write(msg.getBytes());
+         bufferedWriter.write(msg);
+         bufferedWriter.newLine();
+         bufferedWriter.flush();
          handleResponse();
       } catch (IOException e) {
          e.printStackTrace();
       }
    }
    private void handleResponse() throws IOException {
-      String line;
       InputStream inputStream = socket.getInputStream();
       BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
-      while ((line = bufferedReader.readLine()) != null) {
+      while (true) {
+         String line = bufferedReader.readLine();
+         System.out.println(line);
          String[] tokens = line.split(" ");
          if (tokens.length == 0)
             continue;
          if (tokens[1].equalsIgnoreCase("success")) {
             EventQueue.invokeLater(new Runnable() {
                public void run() {
-                  new ChatView(socket,inputUserName.getText());
+                  new ChatView(socket, inputUserName.getText());
                }
             });
+            System.out.println("Login/register success");
             this.dispose();
          } else if (tokens[0].equalsIgnoreCase("login"))
             textNotify.setText("Tên đăng nhập hoặc mật khẩu không đúng!");
          else if (tokens[0].equalsIgnoreCase("register"))
             textNotify.setText("Đăng kí không thành công!");
+         break;
       }
    }
 
-   private void btnRegisterMouseClicked(java.awt.event.MouseEvent evt) {
-   }
 
    public static void main(String args[]) {
       try {

@@ -1,17 +1,31 @@
+import javax.swing.*;
 import java.awt.*;
+import java.awt.event.*;
+import java.io.*;
 import java.net.Socket;
+import java.util.HashMap;
 
-public class ChatView extends javax.swing.JFrame {
-   private String userName;
-   private Socket client;
-   public ChatView() {
+public class ChatView extends javax.swing.JFrame implements Contract.View {
+   private Contract.Controller controller;
+   private DefaultListModel<String> userListModel;
+   private HashMap<String, String> hashMapMsg;
+   public ChatView(Socket socket, String userName) throws HeadlessException {
       initComponents();
-   }
-   public ChatView(Socket socket, String text) throws HeadlessException {
-      this.client = socket;
-      this.userName = text;
-      initComponents();
+      hashMapMsg = new HashMap<>();
+      controller = new Client(this, userName, socket);
+      setTitle("Bạn đang đăng nhập với tên " + userName);
+      this.userListModel = new DefaultListModel<>();
+      listOnline.setModel(userListModel);
+      userListModel.removeAllElements();
       setVisible(true);
+      addWindowListener(new WindowAdapter() {
+         @Override
+         public void windowClosing(WindowEvent e) {
+            controller.exit();
+            System.out.println("Exit");
+            System.exit(0);
+         }
+      });
    }
 
    private void initComponents() {
@@ -26,7 +40,7 @@ public class ChatView extends javax.swing.JFrame {
       btnSend = new javax.swing.JButton();
       btnSendFile = new javax.swing.JButton();
 
-      setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+      setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
       setBackground(new java.awt.Color(204, 204, 204));
 
       listOnline.setModel(new javax.swing.AbstractListModel<String>() {
@@ -57,10 +71,29 @@ public class ChatView extends javax.swing.JFrame {
       });
 
       btnLogout.setText("Thoát");
-
+      btnLogout.addMouseListener(new MouseAdapter() {
+         @Override
+         public void mouseClicked(MouseEvent e) {
+            super.mouseClicked(e);
+            logout();
+         }
+      });
       btnSend.setText("Gửi");
+      btnSend.addMouseListener(new MouseAdapter() {
+         @Override
+         public void mouseClicked(MouseEvent e) {
+            super.mouseClicked(e);
+            sendMsg();
+         }
+      });
       btnSend.setActionCommand("");
-
+      btnSendFile.addMouseListener(new MouseAdapter() {
+         @Override
+         public void mouseClicked(MouseEvent e) {
+            super.mouseClicked(e);
+            sendFile();
+         }
+      });
       btnSendFile.setText("Gửi file");
 
       javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -105,54 +138,28 @@ public class ChatView extends javax.swing.JFrame {
 
       pack();
    }
+   private void logout() {
+   }
+   private void sendMsg() {
+      if (listOnline.getSelectedIndex() == -1)
+         return;
+      String receiver = userListModel.get(listOnline.getSelectedIndex());
+      String msg = textInput.getText();
+      textInput.setText("");
+      textChat.append("YOU: " + msg + "\n");
+      hashMapMsg.put(receiver, textChat.getText());
+      controller.sendMsg(receiver, msg);
+   }
+   private void sendFile() {
+   }
 
    private void textInputActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_textInputActionPerformed
       // TODO add your handling code here:
    }//GEN-LAST:event_textInputActionPerformed
 
    private void listOnlineMouseClicked(java.awt.event.MouseEvent evt) {
-      System.out.println(listOnline.getSelectedIndex());
+      textChat.setText(hashMapMsg.get(userListModel.get(listOnline.getSelectedIndex())));
    }//GEN-LAST:event_listOnlineMouseClicked
-
-   /**
-    * @param args
-    *         the command line arguments
-    */
-   public static void main(String args[]) {
-      /* Set the Nimbus look and feel */
-      //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
-      /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
-       * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html
-       */
-      try {
-         for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-            if ("Nimbus".equals(info.getName())) {
-               javax.swing.UIManager.setLookAndFeel(info.getClassName());
-               break;
-            }
-         }
-      } catch (ClassNotFoundException ex) {
-         java.util.logging.Logger.getLogger(ChatView.class.getName())
-                                 .log(java.util.logging.Level.SEVERE, null, ex);
-      } catch (InstantiationException ex) {
-         java.util.logging.Logger.getLogger(ChatView.class.getName())
-                                 .log(java.util.logging.Level.SEVERE, null, ex);
-      } catch (IllegalAccessException ex) {
-         java.util.logging.Logger.getLogger(ChatView.class.getName())
-                                 .log(java.util.logging.Level.SEVERE, null, ex);
-      } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-         java.util.logging.Logger.getLogger(ChatView.class.getName())
-                                 .log(java.util.logging.Level.SEVERE, null, ex);
-      }
-      //</editor-fold>
-
-      /* Create and display the form */
-      java.awt.EventQueue.invokeLater(new Runnable() {
-         public void run() {
-            new ChatView().setVisible(true);
-         }
-      });
-   }
 
    // Variables declaration - do not modify//GEN-BEGIN:variables
    private javax.swing.JButton btnLogout;
@@ -164,5 +171,27 @@ public class ChatView extends javax.swing.JFrame {
    private javax.swing.JList<String> listOnline;
    private javax.swing.JTextArea textChat;
    private javax.swing.JTextField textInput;
+
+   @Override
+   public void updateOnline(String[] tokens) {
+      userListModel.removeAllElements();
+      for (int i = 1; i < tokens.length; i++)
+         if (!tokens[i].equalsIgnoreCase(controller.getUserName()))
+            userListModel.addElement(tokens[i]);
+   }
+   @Override
+   public void updateOffline(String login) {
+      userListModel.removeElement(login);
+   }
+   @Override
+   public void updateMsg(String userName, String msg) {
+      int index = userListModel.indexOf(userName);
+      listOnline.setSelectedIndex(index);
+      msg = userName.toUpperCase() + ": " + msg + "\n";
+      textChat.setText(hashMapMsg.get(userName));
+      textChat.append(msg);
+      String receiver = listOnline.getSelectedValue();
+      hashMapMsg.put(receiver, textChat.getText());
+   }
    // End of variables declaration//GEN-END:variables
 }
