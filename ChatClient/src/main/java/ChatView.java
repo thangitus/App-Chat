@@ -1,14 +1,19 @@
+import com.vdurmont.emoji.EmojiParser;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 
 public class ChatView extends javax.swing.JFrame implements Contract.View {
    private Contract.Controller controller;
    private DefaultListModel<String> userListModel;
    private HashMap<String, String> hashMapMsg;
+   private String fileNameFull;
+   private String folderSaveFile;
    public ChatView(Socket socket, String userName) throws HeadlessException {
       initComponents();
       hashMapMsg = new HashMap<>();
@@ -26,6 +31,9 @@ public class ChatView extends javax.swing.JFrame implements Contract.View {
             System.exit(0);
          }
       });
+      //      String str = "An :grinning:awesome :smiley:string &#128516;with a few :wink:emojis!";
+      //      String result = EmojiParser.parseToUnicode(str);
+      //      textChat.setText(result);
    }
 
    private void initComponents() {
@@ -151,6 +159,15 @@ public class ChatView extends javax.swing.JFrame implements Contract.View {
       controller.sendMsg(receiver, msg);
    }
    private void sendFile() {
+      if (listOnline.getSelectedIndex() == -1)
+         return;
+      FileDialog dialog = new FileDialog((Dialog) null, "Chọn file");
+      dialog.setMode(FileDialog.LOAD);
+      dialog.setVisible(true);
+      String fileName = dialog.getFile();
+      fileNameFull = dialog.getDirectory() + fileName;
+      String receiver = userListModel.get(listOnline.getSelectedIndex());
+      controller.sendFileRequest(receiver, fileName);
    }
 
    private void textInputActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_textInputActionPerformed
@@ -188,10 +205,35 @@ public class ChatView extends javax.swing.JFrame implements Contract.View {
       int index = userListModel.indexOf(userName);
       listOnline.setSelectedIndex(index);
       msg = userName.toUpperCase() + ": " + msg + "\n";
-      textChat.setText(hashMapMsg.get(userName));
+      if (hashMapMsg.containsKey(userName))
+         textChat.setText(hashMapMsg.get(userName));
       textChat.append(msg);
       String receiver = listOnline.getSelectedValue();
       hashMapMsg.put(receiver, textChat.getText());
+   }
+   @Override
+   public void showConfirm(String userNameOfSenderFile, String fileName) {
+      int confirm = JOptionPane.showConfirmDialog(this, "Từ: " + userNameOfSenderFile + "\ntên file: " + fileName + "\nbạn có Chấp nhận file này không?");
+      if (confirm == 0) {
+         JFileChooser chooser = new JFileChooser();
+         chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+         int open = chooser.showDialog(this, "Mở Thư Mục");
+         if (open == chooser.APPROVE_OPTION) {
+            folderSaveFile = chooser.getSelectedFile()
+                                    .toString() + "\\";
+         } else {
+            folderSaveFile = "D:\\";
+         }
+         controller.acceptSendFile(userNameOfSenderFile, folderSaveFile);
+      } else {
+         String msg = "rejectSendFile " + userNameOfSenderFile;
+         if (hashMapMsg.containsKey(userNameOfSenderFile))
+            textChat.setText(hashMapMsg.get(userNameOfSenderFile));
+         textChat.append("YOU: Từ chối nhận file\n");
+         hashMapMsg.put(userNameOfSenderFile, textChat.getText());
+         controller.send(msg);
+      }
+
    }
    // End of variables declaration//GEN-END:variables
 }

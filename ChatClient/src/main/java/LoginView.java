@@ -1,3 +1,5 @@
+import com.vdurmont.emoji.EmojiParser;
+
 import javax.swing.*;
 import java.awt.*;
 import java.io.*;
@@ -183,7 +185,6 @@ public class LoginView extends javax.swing.JFrame {
          break;
       }
    }
-
 
    public static void main(String args[]) {
       try {

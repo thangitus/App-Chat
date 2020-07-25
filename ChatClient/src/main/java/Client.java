@@ -47,11 +47,12 @@ public class Client implements Contract.Controller {
             } else if ("offline".equalsIgnoreCase(cmd)) {
                handleOffline(tokens);
             } else if ("msg".equalsIgnoreCase(cmd)) {
-               {
-                  tokens = line.split(" ", 3);
-                  handleMessage(tokens);
-               }
-            }
+               tokens = line.split(" ", 3);
+               handleMessage(tokens);
+            } else if (tokens[0].equalsIgnoreCase("requestSendFile"))
+               handleFileRequest(tokens[1], tokens[2]);
+            else if (tokens[0].equalsIgnoreCase("rejectSendFile"))
+               handleRejectSendFile(tokens);
          }
       } catch (Exception ex) {
          ex.printStackTrace();
@@ -61,6 +62,12 @@ public class Client implements Contract.Controller {
             e.printStackTrace();
          }
       }
+   }
+   private void handleRejectSendFile(String[] tokens) {
+      view.updateMsg(tokens[1], "Từ chối nhận file");
+   }
+   private void handleFileRequest(String userName, String fileName) {
+      view.showConfirm(userName, fileName);
    }
    private void handleMessage(String[] tokensMsg) {
       String login = tokensMsg[1];
@@ -105,7 +112,38 @@ public class Client implements Contract.Controller {
       }
    }
    @Override
+   public void send(String msg) {
+      if (msg != null) {
+         try {
+            writer.write(msg);
+            writer.newLine();
+            writer.flush();
+         } catch (IOException e) {
+            e.printStackTrace();
+         }
+      }
+   }
+   @Override
    public String getUserName() {
       return userName;
    }
+
+   @Override
+   public void sendFileRequest(String receiverName, String fileName) {
+      String msg = "requestSendFile " + receiverName + " " + fileName;
+      try {
+         writer.write(msg);
+         writer.newLine();
+         writer.flush();
+      } catch (IOException e) {
+         e.printStackTrace();
+      }
+   }
+
+   @Override
+   public void acceptSendFile(String userName, String folderSaveFile) {
+      FileReceiver fileReceiver = new FileReceiver(userName, this.userName, socket.getPort(), "localhost", folderSaveFile);
+      fileReceiver.run();
+   }
+
 }

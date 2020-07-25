@@ -1,5 +1,6 @@
 import java.io.*;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.List;
 
 public class ServerWorker extends Thread {
@@ -42,9 +43,41 @@ public class ServerWorker extends Thread {
                handleRegister(tokens);
             else if ("msg".equalsIgnoreCase(cmd))
                handleMessage(line);
+            else if (tokens[0].equals("requestSendFile"))
+               handleRequestTransferFile(tokens);
+            else if (tokens[0].equals("rejectSendFile"))
+               handleReject(tokens);
          }
       }
       clientSocket.close();
+   }
+   private void handleReject(String[] tokens) {
+      String receiver = tokens[1];
+      ArrayList<ServerWorker> serverWorkers = server.getWorkList();
+      for (ServerWorker serverWorker : serverWorkers) {
+         if (serverWorker.getUserName()
+                         .equalsIgnoreCase(receiver)) {
+            try {
+               serverWorker.send("rejectSendFile " + userName);
+            } catch (IOException e) {
+               e.printStackTrace();
+            }
+         }
+      }
+   }
+   private void handleRequestTransferFile(String[] tokens) {
+      String receiver = tokens[1];
+      ArrayList<ServerWorker> serverWorkers = server.getWorkList();
+      for (ServerWorker serverWorker : serverWorkers) {
+         if (serverWorker.getUserName()
+                         .equalsIgnoreCase(receiver)) {
+            try {
+               serverWorker.send("requestSendFile " + userName + " " + tokens[2]);
+            } catch (IOException e) {
+               e.printStackTrace();
+            }
+         }
+      }
    }
    private void handleRegister(String[] tokens) throws IOException {
       boolean isSuccess = server.register(tokens[1], tokens[2]);
