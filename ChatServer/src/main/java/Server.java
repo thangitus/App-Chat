@@ -2,6 +2,7 @@ import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -12,6 +13,8 @@ public class Server extends Thread {
    private ArrayList<ServerWorker> workList;
    private List<Account> userOnline;
    private List<Account> allUser;
+   private List<String> groups;
+   private HashMap<String, List<ServerWorker>> hashMapGroup;
    @Override
    public void run() {
       allUser = readUser();
@@ -36,6 +39,7 @@ public class Server extends Thread {
       this.serverPort = serverPort;
       workList = new ArrayList<>();
       userOnline = new ArrayList<>();
+      groups = new ArrayList<>();
    }
 
    private List<Account> readUser() {
@@ -82,9 +86,6 @@ public class Server extends Thread {
       } catch (IOException e) {
          e.printStackTrace();
       }
-      String msg = "login " + userName;
-      for (ServerWorker serverWorker : workList)
-         serverWorker.send(msg);
       return true;
    }
 
@@ -119,5 +120,57 @@ public class Server extends Thread {
             }
       }
       return null;
+   }
+   public void handleCreateGroup(ServerWorker serverWorker, String line) {
+      String[] tokens = line.split(" ", 2);
+      boolean check = false;
+      for (String str : groups)
+         if (str.equalsIgnoreCase(tokens[1])) {
+            check = true;
+            break;
+         }
+      String msg;
+      if (!check) {
+         groups.add(tokens[1]);
+         msg = "Success";
+      } else
+         msg = "Fail";
+
+      try {
+         serverWorker.send(msg);
+      } catch (IOException e) {
+         e.printStackTrace();
+      }
+   }
+   public void handleJoinGroup(ServerWorker serverWorker, String line) {
+      String[] tokens = line.split(" ", 2);
+
+      boolean check = false;
+      for (String str : groups)
+         if (str.equalsIgnoreCase(tokens[1])) {
+            check = true;
+            break;
+         }
+      String msg;
+      if (check)
+         msg = "Success";
+      else
+         msg = "Fail";
+
+      try {
+         serverWorker.send(msg);
+      } catch (IOException e) {
+         e.printStackTrace();
+      }
+   }
+   public void addWorkerToGroup(ServerWorker serverWorker, String groupName) {
+      List<ServerWorker> serverWorkers = hashMapGroup.get(groupName);
+      if (serverWorkers == null)
+         serverWorkers = new ArrayList<>();
+      serverWorkers.add(serverWorker);
+      hashMapGroup.put(groupName, serverWorkers);
+   }
+   public  List<ServerWorker> getListWorkerInGroup(String groupName){
+      return hashMapGroup.get(groupName);
    }
 }

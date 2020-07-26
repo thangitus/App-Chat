@@ -10,6 +10,8 @@ public interface Contract {
 
       String getFileName();
       void setFileNameFull(String fileNameFull);
+
+      void updateMsgGroup(String[] tokens);
    }
 
    interface Controller {

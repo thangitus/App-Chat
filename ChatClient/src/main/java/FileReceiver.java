@@ -12,10 +12,12 @@ public class FileReceiver extends Thread {
    private String receiver;
    private BufferedWriter writer;
    private BufferedReader reader;
-   private final int BUFFER_SIZE = 8192;
+   private final int BUFFER_SIZE = 8000;
+   Contract.View view;
 
-   public FileReceiver(String sender, String receiver, int Port, String host, String filePath) {
+   public FileReceiver(Contract.View view, String sender, String receiver, int Port, String host, String filePath) {
       this.host = host;
+      this.view = view;
       this.sender = sender;
       this.port = Port;
       this.receiver = receiver;
@@ -47,7 +49,7 @@ public class FileReceiver extends Thread {
                        .isInterrupted()) {
             data = reader.readLine();
             System.out.println(data);
-            if (data == null){
+            if (data == null) {
                Thread.sleep(100);
                continue;
             }
@@ -56,11 +58,8 @@ public class FileReceiver extends Thread {
             if (tokens[0].equals("sendingFile")) {
                String sender;
                try {
-                  System.out.println("Receiving...");
                   String filename = tokens[1];
                   sender = tokens[3]; // Get the Sender Username
-                  System.out.println("Đang tải File....");
-                  System.out.println("From: " + sender);
                   String path = folderPath + filename;
 
                   FileOutputStream fos = new FileOutputStream(path);
@@ -77,8 +76,7 @@ public class FileReceiver extends Thread {
                   fos.flush();
                   fos.close();
                   this.socket.close();
-                  System.out.println("File saved at: " + path);
-
+                  view.updateMsg(sender, "Đã gửi file");
                } catch (IOException e) {
                   e.printStackTrace();
                   try {

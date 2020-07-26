@@ -55,6 +55,9 @@ public class Client implements Contract.Controller {
                handleRejectSendFile(tokens);
             else if (tokens[0].equalsIgnoreCase("ReadyReceive"))
                handleReadyReceiverFile(tokens);
+            else if (line.split("_")[0].equalsIgnoreCase("Group")) {
+               handleGroup(line);
+            }
          }
       } catch (Exception ex) {
          ex.printStackTrace();
@@ -65,8 +68,12 @@ public class Client implements Contract.Controller {
          }
       }
    }
+   private void handleGroup(String line) {
+      String[] tokens = line.split("_", 4);
+view.updateMsgGroup(tokens);
+   }
    private void handleReadyReceiverFile(String[] tokens) {
-      FileTransfer fileTransfer = new FileTransfer(userName, tokens[1], "localhost", socket.getPort(), view.getFileName());
+      FileTransfer fileTransfer = new FileTransfer(view,userName, tokens[1], "localhost", socket.getPort(), view.getFileName());
       fileTransfer.start();
       view.setFileNameFull("");
    }
@@ -150,7 +157,7 @@ public class Client implements Contract.Controller {
 
    @Override
    public void acceptSendFile(String userName, String folderSaveFile) {
-      FileReceiver fileReceiver = new FileReceiver(userName, this.userName, socket.getPort(), "localhost", folderSaveFile);
+      FileReceiver fileReceiver = new FileReceiver(view,userName, this.userName, socket.getPort(), "localhost", folderSaveFile);
       fileReceiver.start();
    }
 

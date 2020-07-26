@@ -9,10 +9,12 @@ public class FileTransfer extends Thread {
    private String senderUser;
    private String receiverUser;
    private BufferedWriter writer;
-   private final int BUFFER_SIZE = 8192;
+   private final int BUFFER_SIZE = 8000;
+   Contract.View view;
 
-   public FileTransfer(String sender, String receiver, String host, int port, String fileName) {
+   public FileTransfer(Contract.View view, String sender, String receiver, String host, int port, String fileName) {
       this.host = host;
+      this.view = view;
       this.senderUser = sender;
       this.port = port;
       this.receiverUser = receiver;
@@ -28,9 +30,9 @@ public class FileTransfer extends Thread {
          File file = new File(fileName);
          int len = (int) file.length();
          int filesize = (int) Math.ceil(len / BUFFER_SIZE);
-         String clean_filename = file.getName();
+         String name = file.getName();
 
-         String command = "SendFile " + clean_filename.replace(" ", "_") + " " + filesize + " " + receiverUser + " " + senderUser;
+         String command = "SendFile " + name.replace(" ", "_") + " " + filesize + " " + receiverUser + " " + senderUser;
          writer.write(command);
          writer.newLine();
          writer.flush();
@@ -49,6 +51,7 @@ public class FileTransfer extends Thread {
          input.close();
          output.close();
          socket.close();
+         view.updateMsg("YOU: ", "Đã gửi file " + name + " thành công");
       } catch (IOException e) {
          e.printStackTrace();
       }

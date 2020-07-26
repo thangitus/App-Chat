@@ -29,11 +29,9 @@ public class ServerWorker extends Thread {
       outputStream = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
       InputStream inputStream = clientSocket.getInputStream();
       BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
-      DataInputStream dataInputStream = new DataInputStream(clientSocket.getInputStream());
       String line;
       while (true) {
          line = bufferedReader.readLine();
-         //         line = dataInputStream.readUTF();
          System.out.println(line);
          String[] tokens = line.split(" ");
          if (tokens.length > 0) {
@@ -52,13 +50,34 @@ public class ServerWorker extends Thread {
                handleRequestTransferFile(tokens);
             else if (tokens[0].equals("rejectSendFile"))
                handleReject(tokens);
+            else if (tokens[0].equalsIgnoreCase("Join"))
+               server.addWorkerToGroup(this, tokens[1]);
             else if (tokens[0].equals("ReadyReceive")) {
                handleReadyReceiverFile(tokens);
                break;
             } else if (tokens[0].equals("SendFile")) {
                sendFile(tokens);
                break;
+            } else if (tokens[0].equals("CreateGroup")) {
+               server.handleCreateGroup(this, line);
+               break;
+            } else if (tokens[0].equals("JoinGroup")) {
+               server.handleJoinGroup(this, line);
+               break;
+            } else if (line.split("_")[0].equalsIgnoreCase("Group")) {
+               handleGroup(line);
             }
+         }
+      }
+   }
+   private void handleGroup(String line) {
+      String[] tokens = line.split("_", 4);
+      List<ServerWorker> serverWorkerList = server.getListWorkerInGroup(tokens[1]);
+      for(ServerWorker worker:serverWorkerList) {
+         try {
+            worker.send(line);
+         } catch (IOException e) {
+            e.printStackTrace();
          }
       }
    }
@@ -89,7 +108,6 @@ public class ServerWorker extends Thread {
             System.out.println("test " + test);
             sendFile.flush();
             sendFile.close();
-            //this.socket.close();
          } catch (IOException e) {
             e.printStackTrace();
          }
@@ -190,4 +208,5 @@ public class ServerWorker extends Thread {
          ex.printStackTrace();
       }
    }
+
 }
