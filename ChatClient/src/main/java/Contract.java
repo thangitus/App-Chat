@@ -7,6 +7,9 @@ public interface Contract {
       void updateMsg(String userName, String msg);
 
       void showConfirm(String userName, String fileName);
+
+      String getFileName();
+      void setFileNameFull(String fileNameFull);
    }
 
    interface Controller {

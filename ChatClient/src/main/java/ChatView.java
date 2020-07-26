@@ -235,5 +235,15 @@ public class ChatView extends javax.swing.JFrame implements Contract.View {
       }
 
    }
+   @Override
+   public String getFileName() {
+      return fileNameFull;
+
+   }
+
+   @Override
+   public void setFileNameFull(String fileNameFull) {
+      this.fileNameFull = fileNameFull;
+   }
    // End of variables declaration//GEN-END:variables
 }

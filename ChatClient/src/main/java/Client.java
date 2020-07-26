@@ -53,6 +53,8 @@ public class Client implements Contract.Controller {
                handleFileRequest(tokens[1], tokens[2]);
             else if (tokens[0].equalsIgnoreCase("rejectSendFile"))
                handleRejectSendFile(tokens);
+            else if (tokens[0].equalsIgnoreCase("ReadyReceive"))
+               handleReadyReceiverFile(tokens);
          }
       } catch (Exception ex) {
          ex.printStackTrace();
@@ -62,6 +64,11 @@ public class Client implements Contract.Controller {
             e.printStackTrace();
          }
       }
+   }
+   private void handleReadyReceiverFile(String[] tokens) {
+      FileTransfer fileTransfer = new FileTransfer(userName, tokens[1], "localhost", socket.getPort(), view.getFileName());
+      fileTransfer.start();
+      view.setFileNameFull("");
    }
    private void handleRejectSendFile(String[] tokens) {
       view.updateMsg(tokens[1], "Từ chối nhận file");
@@ -82,6 +89,7 @@ public class Client implements Contract.Controller {
    private void handleOnline(String[] tokens) {
       view.updateOnline(tokens);
    }
+
    @Override
    public void exit() {
       String msg = "offline " + userName;
@@ -143,7 +151,7 @@ public class Client implements Contract.Controller {
    @Override
    public void acceptSendFile(String userName, String folderSaveFile) {
       FileReceiver fileReceiver = new FileReceiver(userName, this.userName, socket.getPort(), "localhost", folderSaveFile);
-      fileReceiver.run();
+      fileReceiver.start();
    }
 
 }

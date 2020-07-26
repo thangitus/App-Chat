@@ -47,6 +47,10 @@ public class FileReceiver extends Thread {
                        .isInterrupted()) {
             data = reader.readLine();
             System.out.println(data);
+            if (data == null){
+               Thread.sleep(100);
+               continue;
+            }
             String[] tokens = data.split(" ");
 
             if (tokens[0].equals("sendingFile")) {
@@ -77,8 +81,6 @@ public class FileReceiver extends Thread {
 
                } catch (IOException e) {
                   e.printStackTrace();
-
-                  System.out.println(e.getMessage());
                   try {
                      socket.close();
                   } catch (IOException ioException) {
@@ -88,7 +90,7 @@ public class FileReceiver extends Thread {
                break;
             }
          }
-      } catch (IOException e) {
+      } catch (IOException | InterruptedException e) {
          e.printStackTrace();
       }
    }

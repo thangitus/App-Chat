@@ -6,8 +6,10 @@ import java.util.List;
 public class ServerWorker extends Thread {
    private final Socket clientSocket;
    private final Server server;
+   private final int BUFFER_SIZE = 8192;
    private BufferedWriter outputStream;
-   private String userName;
+   private String senderName;
+   private String receiver;
    public ServerWorker(Server server, Socket clientSocket) {
       this.server = server;
       this.clientSocket = clientSocket;
@@ -27,9 +29,12 @@ public class ServerWorker extends Thread {
       outputStream = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
       InputStream inputStream = clientSocket.getInputStream();
       BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+      DataInputStream dataInputStream = new DataInputStream(clientSocket.getInputStream());
       String line;
       while (true) {
          line = bufferedReader.readLine();
+         //         line = dataInputStream.readUTF();
+         System.out.println(line);
          String[] tokens = line.split(" ");
          if (tokens.length > 0) {
             String cmd = tokens[0];
@@ -47,18 +52,69 @@ public class ServerWorker extends Thread {
                handleRequestTransferFile(tokens);
             else if (tokens[0].equals("rejectSendFile"))
                handleReject(tokens);
+            else if (tokens[0].equals("ReadyReceive")) {
+               handleReadyReceiverFile(tokens);
+               break;
+            } else if (tokens[0].equals("SendFile")) {
+               sendFile(tokens);
+               break;
+            }
          }
       }
-      clientSocket.close();
+   }
+
+   private void sendFile(String[] tokens) throws IOException {
+      String fileName = tokens[1];
+      String size = tokens[2];
+      String receiver = tokens[3];
+      String sender = tokens[4];
+      ServerWorker workerReceiver = server.getWorkerBySenderReceiver(sender, receiver);
+      if (workerReceiver != null) {
+         try {
+            System.out.println("Sending.......");
+            String cmd = "sendingFile " + fileName + " " + size + " " + sender;
+            System.out.println(cmd);
+            workerReceiver.send(cmd);
+
+            InputStream input = clientSocket.getInputStream();
+            OutputStream sendFile = workerReceiver.getClientSocket()
+                                                  .getOutputStream();
+            byte[] buffer = new byte[BUFFER_SIZE];
+            int cnt;
+            int test = 0;
+            while ((cnt = input.read(buffer)) > 0) {
+               test++;
+               sendFile.write(buffer, 0, cnt);
+            }
+            System.out.println("test " + test);
+            sendFile.flush();
+            sendFile.close();
+            //this.socket.close();
+         } catch (IOException e) {
+            e.printStackTrace();
+         }
+      }
+   }
+   private void handleReadyReceiverFile(String[] tokens) throws IOException {
+      List<ServerWorker> workerList = server.getWorkList();
+      senderName = tokens[2];
+      receiver = tokens[1];
+      for (ServerWorker serverWorker : workerList)
+         if (serverWorker.getSenderName()
+                         .equalsIgnoreCase(senderName)) {
+            String msg = tokens[0] + " " + receiver;
+            serverWorker.send(msg);
+            break;
+         }
    }
    private void handleReject(String[] tokens) {
       String receiver = tokens[1];
       ArrayList<ServerWorker> serverWorkers = server.getWorkList();
       for (ServerWorker serverWorker : serverWorkers) {
-         if (serverWorker.getUserName()
+         if (serverWorker.getSenderName()
                          .equalsIgnoreCase(receiver)) {
             try {
-               serverWorker.send("rejectSendFile " + userName);
+               serverWorker.send("rejectSendFile " + senderName);
             } catch (IOException e) {
                e.printStackTrace();
             }
@@ -69,10 +125,10 @@ public class ServerWorker extends Thread {
       String receiver = tokens[1];
       ArrayList<ServerWorker> serverWorkers = server.getWorkList();
       for (ServerWorker serverWorker : serverWorkers) {
-         if (serverWorker.getUserName()
+         if (serverWorker.getSenderName()
                          .equalsIgnoreCase(receiver)) {
             try {
-               serverWorker.send("requestSendFile " + userName + " " + tokens[2]);
+               serverWorker.send("requestSendFile " + senderName + " " + tokens[2]);
             } catch (IOException e) {
                e.printStackTrace();
             }
@@ -84,7 +140,7 @@ public class ServerWorker extends Thread {
       String msg = "register ";
       if (isSuccess) {
          msg += "success";
-         userName = tokens[1];
+         senderName = tokens[1];
       } else
          msg += "fail";
       send(msg);
@@ -95,7 +151,7 @@ public class ServerWorker extends Thread {
       String msg = tokens[0] + " ";
       if (isSuccess) {
          msg += "success";
-         userName = tokens[1];
+         senderName = tokens[1];
       } else
          msg += "fail";
       send(msg);
@@ -107,7 +163,7 @@ public class ServerWorker extends Thread {
       String[] tokens = line.split(" ", 4);
       List<ServerWorker> serverWorkers = server.getWorkList();
       for (ServerWorker serverWorker : serverWorkers)
-         if (serverWorker.getUserName()
+         if (serverWorker.getSenderName()
                          .equalsIgnoreCase(tokens[1])) {
             String msg = "msg " + tokens[2] + " " + tokens[3];
             System.out.println(msg);
@@ -115,8 +171,15 @@ public class ServerWorker extends Thread {
             break;
          }
    }
-   public String getUserName() {
-      return userName;
+
+   public String getSenderName() {
+      return senderName;
+   }
+   public String getReceiver() {
+      return receiver;
+   }
+   public Socket getClientSocket() {
+      return clientSocket;
    }
    public void send(String msg) throws IOException {
       try {

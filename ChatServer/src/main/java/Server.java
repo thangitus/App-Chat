@@ -109,4 +109,15 @@ public class Server extends Thread {
          e.printStackTrace();
       }
    }
+   public ServerWorker getWorkerBySenderReceiver(String sendingUser, String receivingUser) {
+      for (ServerWorker serverWorker : workList) {
+         if (serverWorker.getSenderName() != null && serverWorker.getReceiver() != null)
+            if (serverWorker.getSenderName()
+                            .equals(sendingUser) && serverWorker.getReceiver()
+                                                                .equals(receivingUser)) {
+               return serverWorker;
+            }
+      }
+      return null;
+   }
 }
